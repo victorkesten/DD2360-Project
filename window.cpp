@@ -12,6 +12,8 @@ Window::~Window()
 {
 }
 
+
+// Creates window, sets size and window name.
 int Window::InitWindow(int x, int y,  char * _name){
   SCREEN_WIDTH = x;
   SCREEN_HEIGHT = y;
@@ -64,12 +66,14 @@ void Window::Draw() {
 
 			// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 			// -------------------------------------------------------------------------------
+      // Don't do swap buffers just yet.
+      // Save this and move into Main renderloop.
 	//glfwSwapBuffers(window);
-	
+
 }
 
 
-// Will be moved into Input Processor. 
+// Will be moved into Input Processor.
 void Window::ProcessInput()
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)

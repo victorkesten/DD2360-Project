@@ -30,7 +30,7 @@ void Mesh::AddVertices(float * vertices, unsigned int * indices, int vert_size, 
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, ind_size, indices, GL_STATIC_DRAW);
 	size = vert_size/sizeof(float);
 	in_size = ind_size/sizeof(float);
-	
+
 	std::cout << ind_size << std::endl;
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -41,6 +41,8 @@ void Mesh::AddVertices(float * vertices, unsigned int * indices, int vert_size, 
 	glBindVertexArray(0);
 
 }
+
+// The vertex attribs will hold stuff like normals and color. 
 void Mesh::Draw() {
 	//glEnableVertexAttribArray(0);
 	//glEnableVertexAttribArray(1);

@@ -11,6 +11,13 @@
 #include <iostream>
 
 #define NUM_PARTICLES 10
+// TODO:
+// Code comment/clean
+
+
+void ProcessInputs(){
+
+}
 
 int main() {
 	Window w;
@@ -54,8 +61,8 @@ int main() {
 		3, 2, 6,
 		6, 7, 3,
 	};
-	
-	// This just changes the position of each particle a little bit. 
+
+	// This just changes the position of each particle a little bit.
 	for (int i = 0; i < NUM_PARTICLES; i++) {
 		particle_array[i] = Mesh();
 		for (int j = 0; j < 24; j++) {
@@ -79,11 +86,11 @@ int main() {
 		//	0,1,3,
 		//	1,2,3
 		//};
-		
+
 
 
 		//Mesh m(vertices, indices, sizeof(vertices), sizeof(indices));
-		
+
 		//glPolygonMode()
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -105,7 +112,7 @@ int main() {
 
 		glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
 		glm::mat4 trans;
-		
+
 		trans = glm::rotate(trans, glm::radians(0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 		vec = trans * vec;
 		int state = glfwGetKey(w.GetWindow(), GLFW_KEY_A);
@@ -115,9 +122,9 @@ int main() {
 
 		int state2 = glfwGetKey(w.GetWindow(), GLFW_KEY_D);
 		if (state2 == GLFW_PRESS) {
-			move += glm::vec3(-0.01f, 0.0f, 0.0f);	
+			move += glm::vec3(-0.01f, 0.0f, 0.0f);
 		}
-		
+
 		int state3 = glfwGetKey(w.GetWindow(), GLFW_KEY_W);
 		if (state3 == GLFW_PRESS) {
 			move += glm::vec3(0.0f, 0.0f, 0.01f);
@@ -139,7 +146,7 @@ int main() {
 		int state7 = glfwGetKey(w.GetWindow(), GLFW_KEY_UP);
 		if (state7 == GLFW_PRESS) {
 			rotate.x += 0.05f;
-		}		
+		}
 		int state8 = glfwGetKey(w.GetWindow(), GLFW_KEY_DOWN);
 		if (state8 == GLFW_PRESS) {
 			rotate.x -= 0.05f;
@@ -153,7 +160,7 @@ int main() {
 		if (state10 == GLFW_PRESS) {
 			rotate.z -= 0.05f;
 		}
-			
+
 
 		shade.UpdateUniforms(move, rotate, rot);
 
@@ -184,22 +191,19 @@ int main() {
 
 		//glUniform3fv(colorLoc, 1, (float*)glm::value_ptr(col));
 
-
-
 		//m.Draw();
 
 		//glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 		//						//glDrawArrays(GL_TRIANGLES, 0, 6);
 		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		// Gotta do this last. Had this poorly done previously. 
+		// Gotta do this last. Had this poorly done previously.
 		glfwSwapBuffers(w.GetWindow());
 
 		glfwPollEvents();
 	}
-	
+
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
 	glfwTerminate();
 	return 0;
-
 }
