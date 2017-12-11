@@ -4,6 +4,7 @@
 #include "window.h"
 #include "shader.h"
 #include "mesh.h"
+#include "nbodysim.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -74,31 +75,35 @@ int main() {
 
 	}
 
-		// set up vertex data (and buffer(s)) and configure vertex attributes
-		// ------------------------------------------------------------------
-		//float vertices[] = {
-		//	0.5f, 0.5f, 0.0f,
-		//	0.5f, -0.5f, 0.0f, // left
-		//	-0.5f, -0.5f, 0.0f, // right
-		//	-0.5f,  0.5f, 0.0f  // top
-		//};
+	// set up vertex data (and buffer(s)) and configure vertex attributes
+	// ------------------------------------------------------------------
+	//float vertices[] = {
+	//	0.5f, 0.5f, 0.0f,
+	//	0.5f, -0.5f, 0.0f, // left
+	//	-0.5f, -0.5f, 0.0f, // right
+	//	-0.5f,  0.5f, 0.0f  // top
+	//};
 
-		//unsigned int indices[] = {
-		//	//0,1,2,1,2,0
-		//	0,1,3,
-		//	1,2,3
-		//};
+	//unsigned int indices[] = {
+	//	//0,1,2,1,2,0
+	//	0,1,3,
+	//	1,2,3
+	//};
 
 
 
-		//Mesh m(vertices, indices, sizeof(vertices), sizeof(indices));
+	//Mesh m(vertices, indices, sizeof(vertices), sizeof(indices));
 
-		//glPolygonMode()
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glm::vec3 move(0,0,0);
-		float rot = 0.0f;
-		glm::vec3 rotate(0, 0, 0);
+	//glPolygonMode()
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glm::vec3 move(0,0,0);
+	float rot = 0.0f;
+	glm::vec3 rotate(0, 0, 0);
+
+
+	//init particle simulation
+	init_particles_planets();
 
 	while (!w.ShouldClose()) {
 		w.Draw();
@@ -202,6 +207,11 @@ int main() {
 		glfwSwapBuffers(w.GetWindow());
 
 		glfwPollEvents();
+	}
+
+	//run 10 simulation steps
+	for(int i = 0; i < 10; ++i) {
+		simulateStep();
 	}
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.

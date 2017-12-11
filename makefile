@@ -18,7 +18,7 @@ LIBRARIES = -L$(glfw_lib) -L/usr/local/cuda/lib64
 
 cpp_files = main.cpp mesh.cpp shader.cpp window.cpp
 objects = $(cpp_files:.cpp=.o)
-headers = mesh.h shader.h window.h
+headers = mesh.h shader.h window.h nbodysim.h
 
 all: motm
 
