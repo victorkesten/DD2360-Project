@@ -1,0 +1,1 @@
+/usr/bin/cc     CMakeFiles/iconify.dir/iconify.c.o CMakeFiles/iconify.dir/__/deps/getopt.c.o CMakeFiles/iconify.dir/__/deps/glad.c.o  -o iconify -rdynamic ../src/libglfw.so.3.2 -lm -Wl,-rpath,/home/simon/prog/C++/AGP_Project/DD2360-Project/glfw-3.2.1/src 
