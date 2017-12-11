@@ -20,10 +20,10 @@ cpp_files = main.cpp mesh.cpp shader.cpp window.cpp
 objects = $(cpp_files:.cpp=.o)
 headers = mesh.h shader.h window.h
 
-all: main.exe
+all: motm
 
-main.exe: $(objects) glad.o nbodysim.o
-				$(CXX) $(LIBRARIES) -o main.exe nbodysim.o $(objects) glad.o $(LINK_FLAGS)
+motm: $(objects) glad.o nbodysim.o
+				$(CXX) $(LIBRARIES) -o motm nbodysim.o $(objects) glad.o $(LINK_FLAGS)
 
 $(objects): %.o: %.cpp $(headers) makefile
 				$(CXX) $(COMPILE_FLAGS) $(INCLUDES) -c -o $@ $<
@@ -37,3 +37,4 @@ nbodysim.o: nbodysim.cu
 .PHONY: clean
 clean:
 	rm -f *.o
+	rm -f motm
