@@ -209,13 +209,15 @@ int main() {
 		glfwPollEvents();
 	}
 
-	//run 10 simulation steps
-	for(int i = 0; i < 10; ++i) {
-		simulateStep();
-	}
+
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
 	glfwTerminate();
+
+	//run 10 simulation steps
+	for(int i = 0; i < 10; ++i) {
+		simulateStep();
+	}
 	return 0;
 }

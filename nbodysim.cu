@@ -64,7 +64,7 @@ struct Particle {
 #else
 #define CONST_VAR static const
 #endif
-static const bool useGpu = false;
+static const bool useGpu = true;
 CONST_VAR float pi = 3.14159265358979323846;	//Life of Pi
 
 static int timesteps = 0;
@@ -82,7 +82,7 @@ CONST_VAR float timestep = 1.0E-9f;			//time step
 
 
 static const int SIM_PER_RENDER = 1;
-CONST_VAR int NUM_PARTICLES = 100;			//currently takes 10ms for 100 particles, 1s for 1000 particles
+CONST_VAR int NUM_PARTICLES = 100000;			//currently takes 10ms for 100 particles, 1s for 1000 particles
 
 															// Planet spawning variables
 CONST_VAR float mass_ratio = 0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)

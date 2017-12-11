@@ -27,7 +27,7 @@ Shader::~Shader()
 uint8_t* readFile(const char *filename)
 {
     FILE *file  = NULL;
-	uint8_t *data  = NULL;
+    uint8_t *data  = NULL;
     unsigned long length = 0;
 
     file = fopen(filename, "rb");
@@ -44,8 +44,10 @@ uint8_t* readFile(const char *filename)
 
     // Read the content of the file
     data = (uint8_t*)malloc(sizeof(uint8_t) * (length+1));
-    if(fread(data, length, sizeof(uint8_t), file) != length) {
+    unsigned long int c;
+    if((c = fread(data, sizeof(uint8_t),length, file)) != length) {
       free(data);
+      printf("only read %i out of %li bytes!\n", c, length);
       return 0;
     }
     data[length] = '\0';
@@ -57,10 +59,10 @@ uint8_t* readFile(const char *filename)
 
 GLuint createShader(GLenum shader_type, const char *shader_filename)
 {
-    GLuint shader       = 0;
-	uint8_t   *shader_data = NULL;
-	GLint  hr           = GL_TRUE;
-    int    length       = 0;
+  GLuint   shader      = 0;
+	uint8_t *shader_data = NULL;
+	GLint    hr          = GL_TRUE;
+  int      length      = 0;
 
     // Create the shader and read the code from the file
 	shader      = glCreateShader(shader_type);
@@ -73,8 +75,8 @@ GLuint createShader(GLenum shader_type, const char *shader_filename)
 	// Check if the Vertex Shader compiled successfully
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &hr);
 	if (hr == GL_FALSE)
-	{
-	    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+  {
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
 
 		vector<char> error_string(length+1);
 		glGetShaderInfoLog(shader, length, NULL, &error_string[0]);
@@ -89,11 +91,11 @@ GLuint createShader(GLenum shader_type, const char *shader_filename)
 
 GLuint Shader::LoadShaders(const char *vertex_shader_filename, const char *fragment_shader_filename)
 {
-    GLuint program         = 0;
-    GLuint vertex_shader   = 0;
-    GLuint fragment_shader = 0;
+  GLuint program         = 0;
+  GLuint vertex_shader   = 0;
+  GLuint fragment_shader = 0;
 	GLint  hr              = GL_TRUE;
-    int    length          = 0;
+  int    length          = 0;
 	std::cout << vertex_shader_filename << std::endl;
     // Create the Vertex and Fragment Shaders
 	vertex_shader   = createShader(GL_VERTEX_SHADER,   vertex_shader_filename);
@@ -114,7 +116,7 @@ GLuint Shader::LoadShaders(const char *vertex_shader_filename, const char *fragm
 	glGetShaderiv(program, GL_LINK_STATUS, &hr);
 	if (hr == GL_FALSE)
 	{
-	    glGetShaderiv(program, GL_INFO_LOG_LENGTH, &length);
+	  glGetShaderiv(program, GL_INFO_LOG_LENGTH, &length);
 
 		vector<char> error_string(length+1);
 		glGetProgramInfoLog(program, length, NULL, &error_string[0]);
