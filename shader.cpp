@@ -28,7 +28,7 @@ uint8_t* readFile(const char *filename)
 {
     FILE *file  = NULL;
 	uint8_t *data  = NULL;
-    long length = 0;
+    unsigned long length = 0;
 
     file = fopen(filename, "rb");
 
@@ -44,7 +44,10 @@ uint8_t* readFile(const char *filename)
 
     // Read the content of the file
     data = (uint8_t*)malloc(sizeof(uint8_t) * (length+1));
-    fread(data, length, sizeof(uint8_t), file);
+    if(fread(data, length, sizeof(uint8_t), file) != length) {
+      free(data);
+      return 0;
+    }
     data[length] = '\0';
 
     fclose(file);
@@ -61,7 +64,7 @@ GLuint createShader(GLenum shader_type, const char *shader_filename)
 
     // Create the shader and read the code from the file
 	shader      = glCreateShader(shader_type);
-	shader_data = readFile(shader_filename);
+	shader_data = readFile(shader_filename);//make a null check here
 
 	// Compile the shader
 	glShaderSource(shader, 1, (const GLchar**)&shader_data, NULL);
@@ -121,7 +124,7 @@ GLuint Shader::LoadShaders(const char *vertex_shader_filename, const char *fragm
 	else {
 		std::cout << "Linked and ready!" << std::endl;
 	}
- 
+
 	// Release all the memory
 	//glDetachShader(program, vertex_shader);
 	//glDetachShader(program, fragment_shader);
@@ -131,7 +134,7 @@ GLuint Shader::LoadShaders(const char *vertex_shader_filename, const char *fragm
 	return program;
 }
 
-// This function usually takes in a Transform, material and a renderingEngine reference that contains the main camera. 
+// This function usually takes in a Transform, material and a renderingEngine reference that contains the main camera.
 void Shader::UpdateUniforms(glm::vec3 trans, glm::vec3 rotate, float rad) {
 	// create transformation matrices
 	glm::mat4 model;

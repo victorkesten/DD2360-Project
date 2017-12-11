@@ -1,7 +1,7 @@
 CC = gcc
 CXX = g++
 
-COMPILE_FLAGS = -Wall -ggdb -O3
+COMPILE_FLAGS = -Wall -ggdb -O3 -Wno-write-strings
 LINK_FLAGS = -lglfw -lGL -lGLU -ldl -lcudart#-lX11#-lgdi32
 
 # glfw = d:/external/glfw-3.1

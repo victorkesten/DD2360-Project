@@ -1,4 +1,4 @@
-#pragma once
+//#pragma once
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "window.h"
@@ -21,7 +21,9 @@ void ProcessInputs(){
 
 int main() {
 	Window w;
-	w.InitWindow(1000,1000, "Hey");
+	if(w.InitWindow(1000,1000, "Hey")) {
+		return -1;
+	}
 
 	Shader shade("basic");
 	shade.DisplayOpenGLInfo();
@@ -104,8 +106,8 @@ int main() {
 		glUseProgram(prog);
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		float timeValue = glfwGetTime();
-		float greenValue = sin(timeValue) / 2.0f + 0.5f;
+		//float timeValue = glfwGetTime();
+		//float greenValue = sin(timeValue) / 2.0f + 0.5f;
 		//int mvpLocation = glGetUniformLocation(prog, "MVP");
 		int transformLocation = glGetUniformLocation(prog, "transform");
 		int colorLoc = glGetUniformLocation(prog, "color");

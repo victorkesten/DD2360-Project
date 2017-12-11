@@ -39,6 +39,7 @@ int Window::InitWindow(int x, int y,  char * _name){
  		std::cout << "Failed to initialize GLAD" << std::endl;
  		return -1;
  	}
+  return 0;
 }
 
 

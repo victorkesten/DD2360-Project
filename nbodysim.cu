@@ -12,7 +12,6 @@
 
 #define TPB 256
 
-
 //dont forget renaming everything .cu	- or is that needed in VS?
 
 
@@ -59,32 +58,37 @@ struct Particle {
 
 
 //**************************************************** SIMULATION VARIABLES ****************************************************
+#ifdef __CUDA_ARCH__
+#define CONST_VAR __constant__ static const
+#else
+#define CONST_VAR static const
+#endif
 static const bool useGpu = true;
-__constant__ static const float pi = 3.14159265358979323846;	//Life of Pi
+CONST_VAR float pi = 3.14159265358979323846;	//Life of Pi
 
 static int timesteps = 0;
-__constant__ static const float epsilon = 47097.5;				//the "minimum" gravitational distance. If smaller, will threshhold at this value to avoid gravitational singularities
-__constant__ static const float D = 376780.0f;					//particle diameter
+CONST_VAR float epsilon = 47097.5;				//the "minimum" gravitational distance. If smaller, will threshhold at this value to avoid gravitational singularities
+CONST_VAR float D = 376780.0f;					//particle diameter
 
 																// [0] = silicate, [1] = iron
-__constant__ static const float masses[2] = { 7.4161E+19f, 1.9549E+20f };		//element mass(kg)
-__constant__ static const float rep[2] = { 2.9114E+11f, 5.8228E+11f };		//the repulsive factor
-__constant__ static const float rep_redc[2] = { 0.01, 0.02 };				//the modifier when particles repulse eachother while moving away from eachother
-__constant__ static const float shell_depth[2] = { 0.001, 0.002 };						//shell depth percentage
+CONST_VAR float masses[2] = { 7.4161E+19f, 1.9549E+20f };		//element mass(kg)
+CONST_VAR float rep[2] = { 2.9114E+11f, 5.8228E+11f };		//the repulsive factor
+CONST_VAR float rep_redc[2] = { 0.01, 0.02 };				//the modifier when particles repulse eachother while moving away from eachother
+CONST_VAR float shell_depth[2] = { 0.001, 0.002 };						//shell depth percentage
 
-__constant__ static const float G = 6.674E-11f;				//gravitational constant
-__constant__ static const float timestep = 1.0E-9f;			//time step			
+CONST_VAR float G = 6.674E-11f;				//gravitational constant
+CONST_VAR float timestep = 1.0E-9f;			//time step
 
 
 static const int SIM_PER_RENDER = 1;
-__constant__ static const int NUM_PARTICLES = 100;			//currently takes 10ms for 100 particles, 1s for 1000 particles
+CONST_VAR int NUM_PARTICLES = 100;			//currently takes 10ms for 100 particles, 1s for 1000 particles
 
 															// Planet spawning variables
-__constant__ static const float mass_ratio = 0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
-__constant__ static const float rad = 3500000.0f;			//the radius of the planets (that is, the initial particle spawning radius)
-__constant__ static const float collision_speed = 10;		//the speed with which the planetoids approach eachother
-__constant__ static const float rotational_speed = 10;	//the speed with which the planetoids rotate
-__constant__ static const float planet_offset = 2;			//the number times radius each planetoid is spawned from world origin
+CONST_VAR float mass_ratio = 0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
+CONST_VAR float rad = 3500000.0f;			//the radius of the planets (that is, the initial particle spawning radius)
+CONST_VAR float collision_speed = 10;		//the speed with which the planetoids approach eachother
+CONST_VAR float rotational_speed = 10;	//the speed with which the planetoids rotate
+CONST_VAR float planet_offset = 2;			//the number times radius each planetoid is spawned from world origin
 
 
 															//**************************************************** SIMULATION FUNCTIONS ****************************************************
@@ -123,7 +127,7 @@ static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, P
 		//Here we position the planetoid to center it on a certain position.
 		list[i].pos += centerpos;
 
-		//To modify the composition of this particle, use the different types. 
+		//To modify the composition of this particle, use the different types.
 		//When we wish to create a core of a certain type of matter, we will turn every particle within a certain radius of the core into that type of matter
 		if (glm::distance(centerpos, centerpos + list[i].pos) > rad*(1.0 - shellThickness)) {//If particle is within shell
 			list[i].type = shellMaterial;
@@ -132,7 +136,7 @@ static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, P
 			list[i].type = coreMaterial;
 		}
 
-		//Here we add the velocity too the particles to make them rotate along with the planet around its axis	
+		//Here we add the velocity too the particles to make them rotate along with the planet around its axis
 		float rc = pow((-1), ((int)(list[i].pos.x - centerpos.x) > 0));
 		float r_xz = sqrt(((list[i].pos.x - centerpos.x)*(list[i].pos.x - centerpos.x)) + ((list[i].pos.z)*(list[i].pos.z)));
 		float theta = atan((list[i].pos.z) / (list[i].pos.x - centerpos.x));
@@ -166,6 +170,7 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, Particle *list, 
 			float Kj = rep[jType];
 			float KRPj = rep_redc[jType];
 			float SDPj = shell_depth[jType];
+
 
 			bool isMerging = (glm::dot((list[j].pos - list[i].pos), (list[j].vel - list[i].vel)) <= 0);
 			float r = glm::distance(list[i].pos, list[j].pos);
@@ -312,6 +317,14 @@ static void simulateStepGPU(int NUM_PARTICLES, Particle *cpuparticles, Particle 
 	printf("calculation time for one step took %f ms\n", timems);
 }
 
-
+static void simulateStep(int NUM_PARTICLES, Particle *cpuparticles, Particle *gpuparticles) {
+	for(int i = 0; i < SIM_PER_RENDER; ++i) {
+		if(useGpu) {
+			simulateStepGPU(NUM_PARTICLES, cpuparticles, gpuparticles);
+		} else {
+			simulateStepCPU(NUM_PARTICLES, cpuparticles);
+		}
+	}
+}
 
 //******************************************************************************************************************************
