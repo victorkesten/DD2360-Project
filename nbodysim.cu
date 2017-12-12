@@ -82,7 +82,7 @@ CONST_VAR float timestep = 1.0E-9f;			//time step
 
 
 static const int SIM_PER_RENDER = 1;
-CONST_VAR int NUM_PARTICLES = 100000;			//currently takes 10ms for 100 particles, 1s for 1000 particles
+CONST_VAR int NUM_PARTICLES = 10000;			//currently takes 10ms for 100 particles, 1s for 1000 particles
 
 															// Planet spawning variables
 CONST_VAR float mass_ratio = 0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
@@ -101,6 +101,10 @@ static glm::vec3 *dev_velocities;
 static glm::vec3 *dev_forces;
 static uint8_t *dev_types;
 
+
+int getParticleCount() {
+	return NUM_PARTICLES;
+}
 //**************************************************** SIMULATION FUNCTIONS ****************************************************
 
 
@@ -198,7 +202,8 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 __global__ static void updateposCuda(int NUM_PARTICLES, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types) {
 	const int i = blockIdx.x*blockDim.x + threadIdx.x;
 	if (i < NUM_PARTICLES) {
-		velocities[i] = velocities[i] + timestep*(forces[i]/masses[types[i]]); //F = ma, thus a = F/m
+		//velocities[i] = velocities[i] + timestep*(forces[i]/masses[types[i]]); //F = ma, thus a = F/m
+		velocities[i] = velocities[i] + timestep*(forces[i]); //F = ma, thus a = F/m
 		positions[i] = positions[i] + timestep*velocities[i];
 	}
 }
@@ -290,16 +295,18 @@ void init_particles_planets() {
 	prep_planetoid(0, mass1, centerPos, collVel, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
 	prep_planetoid(mass1, NUM_PARTICLES, -centerPos, -collVel, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
 
+	//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
+	//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
 	//copy cpu particles to the gpu
 	cudaMalloc(&dev_positions, NUM_PARTICLES*sizeof(glm::vec3));
 	cudaMalloc(&dev_velocities, NUM_PARTICLES*sizeof(glm::vec3));
 	cudaMalloc(&dev_forces, NUM_PARTICLES*sizeof(glm::vec3));
 	cudaMalloc(&dev_types, NUM_PARTICLES*sizeof(uint8_t));
 
-	cudaMemcpy(dev_positions, dev_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_velocities, dev_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_forces, dev_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_types, dev_types, NUM_PARTICLES * sizeof(uint8_t), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_positions, host_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_velocities, host_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_forces, host_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_types, host_types, NUM_PARTICLES * sizeof(uint8_t), cudaMemcpyHostToDevice);
 }
 
 

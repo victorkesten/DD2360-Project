@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-#define NUM_PARTICLES 10
+//#define NUM_PARTICLES 100000
 // TODO:
 // Code comment/clean
 
@@ -25,6 +25,8 @@ int main() {
 	if(w.InitWindow(1000,1000, "Hey")) {
 		return -1;
 	}
+
+	int NUM_PARTICLES = getParticleCount();
 
 	Shader shade("basic");
 	shade.DisplayOpenGLInfo();
@@ -66,6 +68,7 @@ int main() {
 	};
 
 	// This just changes the position of each particle a little bit.
+	/*
 	for (int i = 0; i < NUM_PARTICLES; i++) {
 		particle_array[i] = Mesh();
 		for (int j = 0; j < 24; j++) {
@@ -73,7 +76,9 @@ int main() {
 		}
 		particle_array[i].AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
 
-	}
+	}*/
+	particle_array[0] = Mesh();
+	particle_array[0].AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
@@ -106,6 +111,11 @@ int main() {
 	init_particles_planets();
 
 	while (!w.ShouldClose()) {
+		//update simulation
+		simulateStep();
+		printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
+		printf("%f %f %f\n", (double)(host_positions[NUM_PARTICLES/2].x), (double)(host_positions[NUM_PARTICLES/2].y), (double)(host_positions[NUM_PARTICLES/2].z));
+		printf("%f %f %f\n", (double)(host_positions[NUM_PARTICLES-1].x), (double)(host_positions[NUM_PARTICLES-1].y), (double)(host_positions[NUM_PARTICLES-1].z));
 		w.Draw();
 
 		glUseProgram(prog);
@@ -169,29 +179,37 @@ int main() {
 		}
 
 
-		shade.UpdateUniforms(move, rotate, rot);
 
-		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
-		//glUniformMatrix4fv(mvpLocation, count, transpose, value);
-		glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(trans));
+		shade.UpdateUniforms(move, rotate, rot);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glm::vec4 col(1.0f, 0.1f, 0.5f, 0.5f);
-
 		//m.Draw();
 		float a = 0.0f;
 		for (int i = 0; i < NUM_PARTICLES; i++) {
+			glm::mat4 translation = glm::mat4();
+			translation = glm::translate(translation, host_positions[i]);
+
+			//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+			//glUniformMatrix4fv(mvpLocation, count, transpose, value);
+			glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(translation));
+
+
 			col = glm::vec4(0.3f,  a+0.1f, (a/4)+0.5f, 0.5f);
 			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
-			a += 0.1f;
-			particle_array[i].Draw();
+			//a += 0.1f;
+			particle_array[0].Draw();
 		}
 
-		col = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-		glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 		//m.Draw();
 		for (int i = 0; i < NUM_PARTICLES; i++) {
-			particle_array[i].Draw();
+			shade.UpdateUniforms(move-host_positions[i], rotate, rot);
+
+			glm::vec4 col = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+			particle_array[0].Draw();
 		}
 
 
@@ -215,9 +233,5 @@ int main() {
 	// ------------------------------------------------------------------
 	glfwTerminate();
 
-	//run 10 simulation steps
-	for(int i = 0; i < 10; ++i) {
-		simulateStep();
-	}
 	return 0;
 }

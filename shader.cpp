@@ -47,7 +47,7 @@ uint8_t* readFile(const char *filename)
     unsigned long int c;
     if((c = fread(data, sizeof(uint8_t),length, file)) != length) {
       free(data);
-      printf("only read %i out of %li bytes!\n", c, length);
+      printf("only read %li out of %li bytes!\n", c, length);
       return 0;
     }
     data[length] = '\0';
