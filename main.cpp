@@ -103,6 +103,7 @@ int main() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glm::vec3 move(0,0,0);
+	//glm::vec3 move (67328352.000000, -67196848.000000, 10654063.000000);
 	float rot = 0.0f;
 	glm::vec3 rotate(0, 0, 0);
 
@@ -113,9 +114,9 @@ int main() {
 	while (!w.ShouldClose()) {
 		//update simulation
 		simulateStep();
-		printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
-		printf("%f %f %f\n", (double)(host_positions[NUM_PARTICLES/2].x), (double)(host_positions[NUM_PARTICLES/2].y), (double)(host_positions[NUM_PARTICLES/2].z));
-		printf("%f %f %f\n", (double)(host_positions[NUM_PARTICLES-1].x), (double)(host_positions[NUM_PARTICLES-1].y), (double)(host_positions[NUM_PARTICLES-1].z));
+		//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
+		//printf("%f %f %f\n", (double)(host_positions[NUM_PARTICLES/2].x), (double)(host_positions[NUM_PARTICLES/2].y), (double)(host_positions[NUM_PARTICLES/2].z));
+		//printf("%f %f %f\n", (double)(host_positions[NUM_PARTICLES-1].x), (double)(host_positions[NUM_PARTICLES-1].y), (double)(host_positions[NUM_PARTICLES-1].z));
 		w.Draw();
 
 		glUseProgram(prog);
@@ -180,7 +181,7 @@ int main() {
 
 
 
-		shade.UpdateUniforms(move, rotate, rot);
+		shade.UpdateUniforms(move+host_positions[NUM_PARTICLES/2], rotate, rot);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glm::vec4 col(1.0f, 0.1f, 0.5f, 0.5f);
 		//m.Draw();
@@ -194,7 +195,7 @@ int main() {
 			glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(translation));
 
 
-			col = glm::vec4(0.3f,  a+0.1f, (a/4)+0.5f, 0.5f);
+			//col = glm::vec4(0.3f,  a+0.1f, (a/4)+0.5f, 0.5f);
 			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
 			//a += 0.1f;
 			particle_array[0].Draw();

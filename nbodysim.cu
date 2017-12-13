@@ -78,17 +78,17 @@ CONST_VAR float rep_redc[2] = { 0.01, 0.02 };				//the modifier when particles r
 CONST_VAR float shell_depth[2] = { 0.001, 0.002 };						//shell depth percentage
 
 CONST_VAR float G = 6.674E-11f;				//gravitational constant
-CONST_VAR float timestep = 1.0E-9f;			//time step
+CONST_VAR float timestep = 5.8117f;			//time step
 
 
 static const int SIM_PER_RENDER = 1;
-CONST_VAR int NUM_PARTICLES = 10000;			//currently takes 10ms for 100 particles, 1s for 1000 particles
+CONST_VAR int NUM_PARTICLES = 10000;//44295;			//currently takes 10ms for 10000 particles, 1s for 120000 particles
 
 															// Planet spawning variables
 CONST_VAR float mass_ratio = 0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
 CONST_VAR float rad = 3500000.0f;			//the radius of the planets (that is, the initial particle spawning radius)
-CONST_VAR float collision_speed = 10;		//the speed with which the planetoids approach eachother
-CONST_VAR float rotational_speed = 10;	//the speed with which the planetoids rotate
+CONST_VAR float collision_speed = 3241.6;		//the speed with which the planetoids approach eachother
+CONST_VAR float rotational_speed = (2*3.1516)*1.0f/(24.0f*60.0f*60.0f);	//the speed with which the planetoids rotate, in revelations per second multiplied by 2*pi
 CONST_VAR float planet_offset = 2;			//the number times radius each planetoid is spawned from world origin
 
 //****************************************************   SIMULATION DATA    ****************************************************
@@ -202,8 +202,8 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 __global__ static void updateposCuda(int NUM_PARTICLES, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types) {
 	const int i = blockIdx.x*blockDim.x + threadIdx.x;
 	if (i < NUM_PARTICLES) {
-		//velocities[i] = velocities[i] + timestep*(forces[i]/masses[types[i]]); //F = ma, thus a = F/m
-		velocities[i] = velocities[i] + timestep*(forces[i]); //F = ma, thus a = F/m
+		velocities[i] = velocities[i] + timestep*(forces[i]/masses[types[i]]); //F = ma, thus a = F/m
+		//velocities[i] = velocities[i] + timestep*(forces[i]);
 		positions[i] = positions[i] + timestep*velocities[i];
 	}
 }
@@ -253,6 +253,8 @@ static void simulateStepGPU() {
 	cudaDeviceSynchronize();
 
 	cudaMemcpy(host_positions, dev_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+	cudaMemcpy(host_velocities, dev_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+	cudaMemcpy(host_forces, dev_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
@@ -267,6 +269,9 @@ static void simulateStepGPU() {
 }
 
 void simulateStep() {
+	printf("pos: %f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
+	printf("vel: %f %f %f\n", (double)(host_velocities[0].x), (double)(host_velocities[0].y), (double)(host_velocities[0].z));
+	printf("for: %f %f %f\n", (double)(host_forces[0].x), (double)(host_forces[0].y), (double)(host_forces[0].z));
 	for(int i = 0; i < SIM_PER_RENDER; ++i) {
 		if(useGpu) {
 			simulateStepGPU();
@@ -274,6 +279,7 @@ void simulateStep() {
 			simulateStepCPU();
 		}
 	}
+
 }
 
 //**************************************************** SIMULATION SETUP ****************************************************
@@ -283,7 +289,7 @@ static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, g
 void init_particles_planets() {
 	int mass1 = (NUM_PARTICLES * mass_ratio);
 	glm::vec3 centerPos = glm::vec3((planet_offset * rad), 0, 0);	//The planetoid center position
-	glm::vec3 collVel = glm::vec3(1, 0, 0);							//The normalized vector of collision velocity direction (multiplied with the speed factor later)
+	glm::vec3 dir = glm::vec3(1, 0, 0);							//The normalized vector of collision velocity direction (multiplied with the speed factor later)
 
 	//allocate cpu buffers
 	host_positions = (glm::vec3*)malloc(NUM_PARTICLES * sizeof(glm::vec3));
@@ -292,8 +298,8 @@ void init_particles_planets() {
 	host_types = (uint8_t*)malloc(NUM_PARTICLES * sizeof(uint8_t));
 
 	//Two planets equal in size, moving toward eachother on the x-axis, with a core reaching 50% towards the surface of each planetoid.
-	prep_planetoid(0, mass1, centerPos, collVel, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
-	prep_planetoid(mass1, NUM_PARTICLES, -centerPos, -collVel, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
+	prep_planetoid(0, mass1, centerPos, dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
+	prep_planetoid(mass1, NUM_PARTICLES, -centerPos, -dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
 
 	//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
 	//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
@@ -335,12 +341,12 @@ static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, g
 		}
 
 		//Here we add the velocity too the particles to make them rotate along with the planet around its axis
-		float rc = pow((-1), ((int)(positions[i].x - centerpos.x) > 0));
-		float r_xz = sqrt(((positions[i].x - centerpos.x)*(positions[i].x - centerpos.x)) + ((positions[i].z)*(positions[i].z)));
-		float theta = atan((positions[i].z) / (positions[i].x - centerpos.x));
-		velocities[i].x = rotational_speed*r_xz*sin(theta)*rc;
+		//float rc = pow((-1), ((int)(positions[i].x - centerpos.x) > 0));//this returns 1 or -1 dependign on if x is to the left or right of the center. Why did we use this?
+		float r_xz = sqrt(((positions[i].x - centerpos.x)*(positions[i].x - centerpos.x)) + ((positions[i].z - centerpos.z)*(positions[i].z - centerpos.z)));
+		float theta = atan((positions[i].z - centerpos.z) / (positions[i].x - centerpos.x));
+		velocities[i].x = rotational_speed*r_xz*sin(theta);//*rc;
 		velocities[i].y = 0.0f;
-		velocities[i].z = -rotational_speed*r_xz*cos(theta)*rc;
+		velocities[i].z = -rotational_speed*r_xz*cos(theta);//*rc;
 		//Here we add the "collision" velocity to the planetoid
 		velocities[i] += dir*collision_speed;
 
