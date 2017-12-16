@@ -23,7 +23,7 @@ public:
 	Shader(std::string name);
 	GLuint LoadShaders( const char* ,  const char* );
 	void DisplayOpenGLInfo();
-	void UpdateUniforms(glm::vec3, glm::vec3, float);
+	void UpdateUniforms(glm::vec3, glm::vec3, float, glm::mat4);
 
 
 

@@ -106,7 +106,9 @@ int main() {
 	//glm::vec3 move (67328352.000000, -67196848.000000, 10654063.000000);
 	float rot = 0.0f;
 	glm::vec3 rotate(0, 0, 0);
-
+	glm::mat4 view = glm::lookAt(glm::vec3(4.0f, 10.0f, -10.0f),
+										glm::vec3(0.0f, 0.0f, 0.0f),
+										glm::vec3(0.0f, 1.0f, 0.0f));
 
 	//init particle simulation
 	init_particles_planets();
@@ -179,9 +181,11 @@ int main() {
 			rotate.z -= 0.05f;
 		}
 
+		view = glm::lookAt(move,
+									glm::vec3(0.0f, 0.0f, 0.0f),
+									glm::vec3(0.0f, 1.0f, 0.0f));
 
-
-		shade.UpdateUniforms(move+host_positions[NUM_PARTICLES/2], rotate, rot);
+		shade.UpdateUniforms(move+host_positions[NUM_PARTICLES/2], rotate, rot, view);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glm::vec4 col(1.0f, 0.1f, 0.5f, 0.5f);
 		//m.Draw();
@@ -213,16 +217,6 @@ int main() {
 			particle_array[0].Draw();
 		}
 
-
-
-		//glUniform3fv(colorLoc, 1, (float*)glm::value_ptr(col));
-
-		//m.Draw();
-
-		//glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-		//						//glDrawArrays(GL_TRIANGLES, 0, 6);
-		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		// Gotta do this last. Had this poorly done previously.
 		glfwSwapBuffers(w.GetWindow());
 
 		glfwPollEvents();
