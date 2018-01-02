@@ -42,7 +42,7 @@ void Mesh::AddVertices(float * vertices, unsigned int * indices, int vert_size, 
 
 }
 
-// The vertex attribs will hold stuff like normals and color. 
+// The vertex attribs will hold stuff like normals and color.
 void Mesh::Draw() {
 	//glEnableVertexAttribArray(0);
 	//glEnableVertexAttribArray(1);
@@ -55,7 +55,8 @@ void Mesh::Draw() {
 	//glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, in_size, GL_UNSIGNED_INT, 0);
-
+	//glDrawElementsInstanced(GL_TRIANGLES, in_size,
+	//												GL_UNSIGNED_INT, 0, count);
 	//glDisableVertexAttribArray(0);
 	//glDisableVertexAttribArray(1);
 	//glDisableVertexAttribArray(2);

@@ -33,7 +33,9 @@ int main() {
 
 	GLuint prog = shade.LoadShaders("basic.vs", "basic.fs");
 
-	Mesh * particle_array = new Mesh[10];
+
+
+	Mesh particle;
 	float vertices[] = {
 		// front
 		-0.5, -0.5,  0.5,
@@ -77,8 +79,8 @@ int main() {
 		particle_array[i].AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
 
 	}*/
-	particle_array[0] = Mesh();
-	particle_array[0].AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
+	particle = Mesh();
+	particle.AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
@@ -102,9 +104,8 @@ int main() {
 	//glPolygonMode()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glm::vec3 move(0,0,0);
+	glm::vec3 move(0,0,37678000.0f);
 	//glm::vec3 move (67328352.000000, -67196848.000000, 10654063.000000);
-	float rot = 0.0f;
 	glm::vec3 rotate(0, 0, 0);
 	glm::mat4 view = glm::lookAt(glm::vec3(4.0f, 10.0f, -10.0f),
 										glm::vec3(0.0f, 0.0f, 0.0f),
@@ -127,8 +128,9 @@ int main() {
 		//float timeValue = glfwGetTime();
 		//float greenValue = sin(timeValue) / 2.0f + 0.5f;
 		//int mvpLocation = glGetUniformLocation(prog, "MVP");
-		int transformLocation = glGetUniformLocation(prog, "transform");
+		//int transformLocation = glGetUniformLocation(prog, "transform");
 		int colorLoc = glGetUniformLocation(prog, "color");
+		int offsetLoc = glGetUniformLocation(prog, "offset");
 
 		glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
 		glm::mat4 trans;
@@ -180,42 +182,49 @@ int main() {
 		if (state10 == GLFW_PRESS) {
 			rotate.z -= 0.05f;
 		}
-
+		//generate rotation matrix
+		//host_positions[NUM_PARTICLES/2] = glm::vec3(0,0,0);
 		view = glm::lookAt(move,
-									glm::vec3(0.0f, 0.0f, 0.0f),
+									//glm::vec3(0.0f, 0.0f, 0.0f),
+									host_positions[NUM_PARTICLES/2],//look at one particle
+									//move+rot*vec3(0,0,1),//figure out a way to handle direction vectors
+									//glm::vec3(cos()),
 									glm::vec3(0.0f, 1.0f, 0.0f));
 
-		shade.UpdateUniforms(move+host_positions[NUM_PARTICLES/2], rotate, rot, view);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		shade.UpdateUniforms(rotate, view);
+
 		glm::vec4 col(1.0f, 0.1f, 0.5f, 0.5f);
 		//m.Draw();
-		float a = 0.0f;
+		//float a = 0.0f;
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		for (int i = 0; i < NUM_PARTICLES; i++) {
-			glm::mat4 translation = glm::mat4();
-			translation = glm::translate(translation, host_positions[i]);
+			//glm::mat4 translation = glm::mat4(1);
+			//translation = glm::translate(translation, host_positions[i]);
 
 			//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 			//glUniformMatrix4fv(mvpLocation, count, transpose, value);
-			glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(translation));
+			//glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(translation));
 
 
 			//col = glm::vec4(0.3f,  a+0.1f, (a/4)+0.5f, 0.5f);
 			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
+			glUniform3fv(offsetLoc, 1, (float*)glm::value_ptr(host_positions[i]));
 			//a += 0.1f;
-			particle_array[0].Draw();
+			particle.Draw();
 		}
 
 
 		//m.Draw();
+		/*
 		for (int i = 0; i < NUM_PARTICLES; i++) {
-			shade.UpdateUniforms(move-host_positions[i], rotate, rot);
+			shade.UpdateUniforms(move-host_positions[i], rotate, rot, view);
 
 			glm::vec4 col = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 			particle_array[0].Draw();
-		}
+		}*/
 
 		glfwSwapBuffers(w.GetWindow());
 

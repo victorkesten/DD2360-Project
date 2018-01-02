@@ -137,24 +137,24 @@ GLuint Shader::LoadShaders(const char *vertex_shader_filename, const char *fragm
 }
 
 // This function usually takes in a Transform, material and a renderingEngine reference that contains the main camera.
-void Shader::UpdateUniforms(glm::vec3 trans, glm::vec3 rotate, float rad, glm::mat4 v) {
+void Shader::UpdateUniforms(glm::vec3 rotate, glm::mat4 v) {
 	// create transformation matrices
-	glm::mat4 model;
+	//glm::mat4 model;
 	glm::mat4 view = v;
 	glm::mat4 projection;
-	model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	//model = glm::rotate(model, glm::radians(rotate.x), glm::vec3(1.0f, 0.0f, 0.0f));
 //	model = glm::rotate(model, glm::radians(rotate.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
 //	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-	view = glm::translate(view, trans);
-	projection = glm::perspective(glm::radians(45.0f), (float)1000 / (float)1000, 0.1f, 100.0f);
+	//view = glm::translate(view, trans);
+	projection = glm::perspective(glm::radians(45.0f), (float)1000 / (float)1000, 100.0f, 100000000.0f);
 	// retrieve the matrix uniform locations
-	unsigned int modelLoc = glGetUniformLocation(prog, "model");
+	//unsigned int modelLoc = glGetUniformLocation(prog, "model");
 	unsigned int viewLoc = glGetUniformLocation(prog, "view");
 	unsigned int projectionLoc = glGetUniformLocation(prog, "projection");
 	// pass them to the shaders (3 different ways)
-	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 }
