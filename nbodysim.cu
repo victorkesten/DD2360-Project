@@ -85,11 +85,12 @@ static const int SIM_PER_RENDER = 1;
 CONST_VAR int NUM_PARTICLES = 16384;//44295;			//currently takes 10ms for 10000 particles, 1s for 120000 particles. Goal is 131,072, or 16,384
 
 															// Planet spawning variables
-CONST_VAR float mass_ratio = 0.65;//0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
+CONST_VAR float mass_ratio = 0.5;//0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
 CONST_VAR float rad = 6371000.0f;			//the radius of the planets (that is, the initial particle spawning radius)
 CONST_VAR float collision_speed = -3241.6;		//the speed with which the planetoids approach eachother
-CONST_VAR float rotational_speed = (2*3.1516)*1.0f/(24.0f*60.0f*60.0f);	//the speed with which the planetoids rotate, in revolutions per second multiplied by 2*pi
-CONST_VAR float planet_offset = 4.0f;//2;			//the number times radius each planetoid is spawned from world origin
+CONST_VAR float rotational_speed = (2*3.1516)*1.0f/(8.0f*60.0f*60.0f);//1.0f/(24.0f*60.0f*60.0f);	//the speed with which the planetoids rotate, in revolutions per second multiplied by 2*pi
+CONST_VAR float planet_offset = 6.0f;//2;			//the number times radius each planetoid is spawned from world origin
+CONST_VAR float planet_offset_z = 0.6f;//number times radius one planet shifted sideways, ensures collision is not head-on
 
 //****************************************************   SIMULATION DATA    ****************************************************
 glm::vec3 *host_positions = 0;//major optimisation(?): store each particle member variable separate
@@ -164,17 +165,7 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 			}
 
 			//If the shell of one of the particles is penetrated, but not the other(same as above, but if the ratios are the opposite)
-			/*//old version...
-			else if (D - D*SDPi <= r && r < D - D*SDPj) {
-				if (isMerging) {
-					repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
-				}
-				else {
-					repForce = 0.5*((Ki*KRPi) + Kj)*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
-				}
-			}*/
+			//else if (D - D*SDPi <= r && r < D - D*SDPj) {//old version...
 			else if (D - D*SDPj <= r && r < D - D*SDPi) {//new version
 				if (isMerging) {
 					repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
@@ -306,7 +297,7 @@ void simulateStep() {
 }
 
 //**************************************************** SIMULATION SETUP ****************************************************
-static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types, uint8_t coreMaterial, uint8_t shellMaterial, float shellThickness);
+static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types, uint8_t coreMaterial, uint8_t shellMaterial, float shellThickness, float rotVel);
 
 /*Initialize the two planetoids.*/
 void init_particles_planets() {
@@ -321,8 +312,8 @@ void init_particles_planets() {
 	host_types = (uint8_t*)malloc(NUM_PARTICLES * sizeof(uint8_t));
 
 	//Two planets equal in size, moving toward eachother on the x-axis, with a core reaching 50% towards the surface of each planetoid.
-	prep_planetoid(0, mass1, centerPos+glm::vec3(0,1,0)*rad*0.65f, dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
-	prep_planetoid(mass1, NUM_PARTICLES, -centerPos, -dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
+	prep_planetoid(0, mass1, centerPos+glm::vec3(0,0,1)*rad*planet_offset_z, dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5, rotational_speed);
+	prep_planetoid(mass1, NUM_PARTICLES, -centerPos, -dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5, -rotational_speed);
 
 	//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
 	//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
@@ -343,7 +334,7 @@ void init_particles_planets() {
 
 /*If I've thought correctly, this should never be modified. Every planetoid will be created with this
 *	Parameters are mass(interval of particle indices), position, and speed.*/
-static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types, uint8_t coreMaterial, uint8_t shellMaterial, float shellThickness) {
+static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types, uint8_t coreMaterial, uint8_t shellMaterial, float shellThickness, float rotVel) {
 	for (int i = i0; i < i1; i++) {
 		//Here we randomly distribute particles uniformly within a sphere
 		float rho1 = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -362,19 +353,19 @@ static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, g
 			types[i] = coreMaterial;
 		}
 
-		//Here we position the planetoid to center it on a certain position.
-		positions[i] += centerpos;
-
 		//Here we add the velocity too the particles to make them rotate along with the planet around its axis
 		//float rc = pow((-1), ((int)(positions[i].x - centerpos.x) > 0));//this returns 1 or -1 dependign on if x is to the left or right of the center. Why did we use this?
-		float r_xz = sqrt(((positions[i].x - centerpos.x)*(positions[i].x - centerpos.x)) + ((positions[i].z - centerpos.z)*(positions[i].z - centerpos.z)));
-		float theta = atan((positions[i].z - centerpos.z) / (positions[i].x - centerpos.x));
-		velocities[i].x = rotational_speed*r_xz*sin(theta);//*rc;
+		float r_xz = sqrt((positions[i].x)*(positions[i].x) + (positions[i].z)*(positions[i].z));
+		float theta = atan2(positions[i].z, positions[i].x);//atan(positions[i].z) / (positions[i].x);
+		velocities[i].x = rotVel*r_xz*sin(theta);//*rc;
 		velocities[i].y = 0.0f;
-		velocities[i].z = -rotational_speed*r_xz*cos(theta);//*rc;
+		velocities[i].z = -rotVel*r_xz*cos(theta);//*rc;
 		//Here we add the "collision" velocity to the planetoid
 		velocities[i] += dir*collision_speed;
 
+
+		//Here we position the planetoid to center it on a certain position.
+		positions[i] += centerpos;
 	}
 }
 //******************************************************************************************************************************

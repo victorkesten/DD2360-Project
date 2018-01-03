@@ -207,7 +207,7 @@ int main() {
 			//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 			//glUniformMatrix4fv(mvpLocation, count, transpose, value);
 			//glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(translation));
-			int colIndex = i < NUM_PARTICLES*0.65f ? 0 : 2;
+			int colIndex = i < NUM_PARTICLES*0.5f ? 0 : 2;
 			colIndex += host_types[i];
 
 			//col = glm::vec4(0.3f,  a+0.1f, (a/4)+0.5f, 0.5f);
