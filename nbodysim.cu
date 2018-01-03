@@ -177,11 +177,11 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 			}*/
 			else if (D - D*SDPj <= r && r < D - D*SDPi) {//new version
 				if (isMerging) {
-					repForce = 0.5*(Kj + Ki)*((D*D) - (r*r));
+					repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
 					force += (gravForce - repForce) * unit_vector;
 				}
 				else {
-					repForce = 0.5*((Kj*KRPj) + Ki)*((D*D) - (r*r));
+					repForce = 0.5*((Ki*KRPi) + Kj)*((D*D) - (r*r));
 					force += (gravForce - repForce) * unit_vector;
 				}
 			}
