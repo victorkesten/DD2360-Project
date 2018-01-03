@@ -139,22 +139,22 @@ int main() {
 		vec = trans * vec;
 		int state = glfwGetKey(w.GetWindow(), GLFW_KEY_A);
 		if (state == GLFW_PRESS) {
-			move += glm::vec3(0.01f, 0.0f, 0.0f);
+			move += glm::vec3(1000000.0f, 0.0f, 0.0f);
 		}
 
 		int state2 = glfwGetKey(w.GetWindow(), GLFW_KEY_D);
 		if (state2 == GLFW_PRESS) {
-			move += glm::vec3(-0.01f, 0.0f, 0.0f);
+			move += glm::vec3(-1000000.0f, 0.0f, 0.0f);
 		}
 
 		int state3 = glfwGetKey(w.GetWindow(), GLFW_KEY_W);
 		if (state3 == GLFW_PRESS) {
-			move += glm::vec3(0.0f, 0.0f, 0.01f);
+			move += glm::vec3(0.0f, 0.0f, 1000000.0f);
 		}
 
 		int state4 = glfwGetKey(w.GetWindow(), GLFW_KEY_S);
 		if (state4 == GLFW_PRESS) {
-			move += glm::vec3(0.0f, 0.0f, -0.01f);
+			move += glm::vec3(0.0f, 0.0f, -1000000.0f);
 		}
 		int state5 = glfwGetKey(w.GetWindow(), GLFW_KEY_RIGHT);
 		if (state5 == GLFW_PRESS) {
@@ -207,7 +207,7 @@ int main() {
 			//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 			//glUniformMatrix4fv(mvpLocation, count, transpose, value);
 			//glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(translation));
-			int colIndex = i < NUM_PARTICLES*0.6f ? 0 : 2;
+			int colIndex = i < NUM_PARTICLES*0.65f ? 0 : 2;
 			colIndex += host_types[i];
 
 			//col = glm::vec4(0.3f,  a+0.1f, (a/4)+0.5f, 0.5f);
