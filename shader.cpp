@@ -148,7 +148,7 @@ void Shader::UpdateUniforms(glm::vec3 rotate, glm::mat4 v) {
 
 //	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 	//view = glm::translate(view, trans);
-	projection = glm::perspective(glm::radians(45.0f), (float)1000 / (float)1000, 100.0f, 100000000.0f);
+	projection = glm::perspective(glm::radians(45.0f), (float)1000 / (float)1000, 10000.0f, 500000000.0f);
 	// retrieve the matrix uniform locations
 	//unsigned int modelLoc = glGetUniformLocation(prog, "model");
 	unsigned int viewLoc = glGetUniformLocation(prog, "view");

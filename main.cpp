@@ -104,7 +104,7 @@ int main() {
 	//glPolygonMode()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glm::vec3 move(0,0,37678000.0f);
+	glm::vec3 move(0,0,67678000.0f);
 	//glm::vec3 move (67328352.000000, -67196848.000000, 10654063.000000);
 	glm::vec3 rotate(0, 0, 0);
 	glm::mat4 view = glm::lookAt(glm::vec3(4.0f, 10.0f, -10.0f),
@@ -185,15 +185,18 @@ int main() {
 		//generate rotation matrix
 		//host_positions[NUM_PARTICLES/2] = glm::vec3(0,0,0);
 		view = glm::lookAt(move,
-									//glm::vec3(0.0f, 0.0f, 0.0f),
-									host_positions[NUM_PARTICLES/2],//look at one particle
-									//move+rot*vec3(0,0,1),//figure out a way to handle direction vectors
-									//glm::vec3(cos()),
+									//host_positions[NUM_PARTICLES/2],//look at one particle
+									glm::vec3(0,0,0),//look at origin
+									//move+rot*vec3(0,0,1),//figure out a way to handle direction vectors, for camera rotation
 									glm::vec3(0.0f, 1.0f, 0.0f));
 
 		shade.UpdateUniforms(rotate, view);
 
-		glm::vec4 col(1.0f, 0.1f, 0.5f, 0.5f);
+		glm::vec4 colors[4];
+		colors[0] = glm::vec4(1.0f, 0.1f, 0.5f, 0.1f);
+		colors[1] = glm::vec4(1.0f, 0.1f, 0.0f, 0.6f);
+		colors[2] = glm::vec4(0.1f, 1.0f, 0.5f, 0.1f);
+		colors[3] = glm::vec4(0.1f, 1.0f, 0.0f, 0.6f);
 		//m.Draw();
 		//float a = 0.0f;
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -204,10 +207,11 @@ int main() {
 			//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 			//glUniformMatrix4fv(mvpLocation, count, transpose, value);
 			//glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(translation));
-
+			int colIndex = i < NUM_PARTICLES*0.6f ? 0 : 2;
+			colIndex += host_types[i];
 
 			//col = glm::vec4(0.3f,  a+0.1f, (a/4)+0.5f, 0.5f);
-			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
+			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(colors[colIndex]));
 			glUniform3fv(offsetLoc, 1, (float*)glm::value_ptr(host_positions[i]));
 			//a += 0.1f;
 			particle.Draw();

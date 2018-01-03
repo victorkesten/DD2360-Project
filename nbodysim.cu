@@ -78,18 +78,18 @@ CONST_VAR float rep_redc[2] = { 0.01, 0.02 };				//the modifier when particles r
 CONST_VAR float shell_depth[2] = { 0.001, 0.002 };						//shell depth percentage
 
 CONST_VAR float G = 6.674E-11f;				//gravitational constant
-CONST_VAR float timestep = 5.8117f;			//time step
+CONST_VAR float timestep = 5.8117f;//5.8117f;			//time step
 
 
 static const int SIM_PER_RENDER = 1;
-CONST_VAR int NUM_PARTICLES = 10000;//44295;			//currently takes 10ms for 10000 particles, 1s for 120000 particles
+CONST_VAR int NUM_PARTICLES = 16384;//44295;			//currently takes 10ms for 10000 particles, 1s for 120000 particles. Goal is 131,072, or 16,384
 
 															// Planet spawning variables
-CONST_VAR float mass_ratio = 0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
-CONST_VAR float rad = 3500000.0f;			//the radius of the planets (that is, the initial particle spawning radius)
-CONST_VAR float collision_speed = 3241.6;		//the speed with which the planetoids approach eachother
-CONST_VAR float rotational_speed = (2*3.1516)*1.0f/(24.0f*60.0f*60.0f);	//the speed with which the planetoids rotate, in revelations per second multiplied by 2*pi
-CONST_VAR float planet_offset = 2;			//the number times radius each planetoid is spawned from world origin
+CONST_VAR float mass_ratio = 0.6f;//0.5f;			//the mass distribution between the two planetary bodies (0.5 means equal distribution, 1.0 means one gets all)
+CONST_VAR float rad = 6371000.0f;			//the radius of the planets (that is, the initial particle spawning radius)
+CONST_VAR float collision_speed = -3241.6;		//the speed with which the planetoids approach eachother
+CONST_VAR float rotational_speed = (2*3.1516)*1.0f/(24.0f*60.0f*60.0f);	//the speed with which the planetoids rotate, in revolutions per second multiplied by 2*pi
+CONST_VAR float planet_offset = 4.0f;//2;			//the number times radius each planetoid is spawned from world origin
 
 //****************************************************   SIMULATION DATA    ****************************************************
 glm::vec3 *host_positions = 0;//major optimisation(?): store each particle member variable separate
@@ -98,6 +98,7 @@ glm::vec3 *host_forces = 0;//it also allows us to pick and choose what data to r
 uint8_t *host_types = 0;
 static glm::vec3 *dev_positions;//no outside file should mess with these
 static glm::vec3 *dev_velocities;
+static glm::vec3 *dev_acceleration;
 static glm::vec3 *dev_forces;
 static uint8_t *dev_types;
 
@@ -139,6 +140,8 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 			//--------------------------------------------------------
 
 			//If the two particles doesn't touch at all
+			//NOTE: it might be a good idea to always just add the gravitational force to the final force
+			//since this spares us an if statement, which are costly on the GPU
 			if (D <= r) {
 				force += (gravForce)* unit_vector;
 			}
@@ -199,12 +202,22 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 }
 
 /*frogleap every particles position from nextPos to pos*/
-__global__ static void updateposCuda(int NUM_PARTICLES, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types) {
+__global__ static void updateposCuda(int NUM_PARTICLES, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types, glm::vec3 *acceleration) {
 	const int i = blockIdx.x*blockDim.x + threadIdx.x;
 	if (i < NUM_PARTICLES) {
+		//kind of working...
 		velocities[i] = velocities[i] + timestep*(forces[i]/masses[types[i]]); //F = ma, thus a = F/m
 		//velocities[i] = velocities[i] + timestep*(forces[i]);
 		positions[i] = positions[i] + timestep*velocities[i];
+
+		/*
+		//leap frog method from wikipedia
+		//doesn't seem to work as well. Might have to do with timestep
+		positions[i] = positions[i] + timestep*velocities[i] + 0.5f*timestep*timestep*acceleration[i];
+		//NOTE: we need the forces from the precious timestep here
+		velocities[i] = velocities[i] + 0.5f*((forces[i]/masses[types[i]])+acceleration[i])*timestep; //F = ma, thus a = F/m
+		acceleration[i] = (forces[i]/masses[types[i]]);
+		*/
 	}
 }
 
@@ -249,7 +262,7 @@ static void simulateStepGPU() {
 
 	simstepCuda <<< blocks, TPB >> >(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types);
 	cudaDeviceSynchronize();
-	updateposCuda <<< blocks, TPB >> >(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types);
+	updateposCuda <<< blocks, TPB >> >(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types, dev_acceleration);
 	cudaDeviceSynchronize();
 
 	cudaMemcpy(host_positions, dev_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
@@ -298,7 +311,7 @@ void init_particles_planets() {
 	host_types = (uint8_t*)malloc(NUM_PARTICLES * sizeof(uint8_t));
 
 	//Two planets equal in size, moving toward eachother on the x-axis, with a core reaching 50% towards the surface of each planetoid.
-	prep_planetoid(0, mass1, centerPos, dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
+	prep_planetoid(0, mass1, centerPos+glm::vec3(0,1,0)*rad*0.5f, dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
 	prep_planetoid(mass1, NUM_PARTICLES, -centerPos, -dir, host_positions, host_velocities, host_forces, host_types, 1, 0, 0.5);
 
 	//printf("%f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
@@ -307,11 +320,13 @@ void init_particles_planets() {
 	cudaMalloc(&dev_positions, NUM_PARTICLES*sizeof(glm::vec3));
 	cudaMalloc(&dev_velocities, NUM_PARTICLES*sizeof(glm::vec3));
 	cudaMalloc(&dev_forces, NUM_PARTICLES*sizeof(glm::vec3));
+	cudaMalloc(&dev_acceleration, NUM_PARTICLES*sizeof(glm::vec3));
 	cudaMalloc(&dev_types, NUM_PARTICLES*sizeof(uint8_t));
 
 	cudaMemcpy(dev_positions, host_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_velocities, host_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_forces, host_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyHostToDevice);
+	cudaMemset(dev_acceleration, 0, NUM_PARTICLES * sizeof(glm::vec3));
 	cudaMemcpy(dev_types, host_types, NUM_PARTICLES * sizeof(uint8_t), cudaMemcpyHostToDevice);
 }
 
@@ -329,16 +344,16 @@ static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, g
 		positions[i].y = rad * pow(rho1, (1.0 / 3.0)) * pow((1 - mu*mu), (1.0 / 2.0)) * sin(2 * pi * rho3);
 		positions[i].z = rad * pow(rho1, (1.0 / 3.0)) * mu;
 
-		//Here we position the planetoid to center it on a certain position.
-		positions[i] += centerpos;
-
 		//To modify the composition of this particle, use the different types.
 		//When we wish to create a core of a certain type of matter, we will turn every particle within a certain radius of the core into that type of matter
-		if (glm::distance(centerpos, centerpos + positions[i]) > rad*(1.0 - shellThickness)) {//If particle is within shell
+		if (glm::length(positions[i]) > rad*shellThickness) {//If particle is within shell
 			types[i] = shellMaterial;
 		} else {//If particle is within core
 			types[i] = coreMaterial;
 		}
+
+		//Here we position the planetoid to center it on a certain position.
+		positions[i] += centerpos;
 
 		//Here we add the velocity too the particles to make them rotate along with the planet around its axis
 		//float rc = pow((-1), ((int)(positions[i].x - centerpos.x) > 0));//this returns 1 or -1 dependign on if x is to the left or right of the center. Why did we use this?
