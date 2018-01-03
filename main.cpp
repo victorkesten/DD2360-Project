@@ -139,22 +139,22 @@ int main() {
 		vec = trans * vec;
 		int state = glfwGetKey(w.GetWindow(), GLFW_KEY_A);
 		if (state == GLFW_PRESS) {
-			move += glm::vec3(1000000.0f, 0.0f, 0.0f);
+			move += glm::vec3(-1000000.0f, 0.0f, 0.0f);
 		}
 
 		int state2 = glfwGetKey(w.GetWindow(), GLFW_KEY_D);
 		if (state2 == GLFW_PRESS) {
-			move += glm::vec3(-1000000.0f, 0.0f, 0.0f);
+			move += glm::vec3(1000000.0f, 0.0f, 0.0f);
 		}
 
 		int state3 = glfwGetKey(w.GetWindow(), GLFW_KEY_W);
 		if (state3 == GLFW_PRESS) {
-			move += glm::vec3(0.0f, 0.0f, 1000000.0f);
+			move += glm::vec3(0.0f, 1000000.0f, 0.0f);
 		}
 
 		int state4 = glfwGetKey(w.GetWindow(), GLFW_KEY_S);
 		if (state4 == GLFW_PRESS) {
-			move += glm::vec3(0.0f, 0.0f, -1000000.0f);
+			move += glm::vec3(0.0f, -1000000.0f, 0.0f);
 		}
 		int state5 = glfwGetKey(w.GetWindow(), GLFW_KEY_RIGHT);
 		if (state5 == GLFW_PRESS) {
@@ -186,7 +186,7 @@ int main() {
 		//host_positions[NUM_PARTICLES/2] = glm::vec3(0,0,0);
 		view = glm::lookAt(move,
 									//host_positions[NUM_PARTICLES/2],//look at one particle
-									glm::vec3(0,0,0),//look at origin
+									move - glm::vec3(0,0,67678000.0f),//look at origin
 									//move+rot*vec3(0,0,1),//figure out a way to handle direction vectors, for camera rotation
 									glm::vec3(0.0f, 1.0f, 0.0f));
 
