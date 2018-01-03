@@ -186,7 +186,8 @@ int main() {
 		//host_positions[NUM_PARTICLES/2] = glm::vec3(0,0,0);
 		view = glm::lookAt(move,
 									//host_positions[NUM_PARTICLES/2],//look at one particle
-									move - glm::vec3(0,0,67678000.0f),//look at origin
+									//glm::vec3(0,0,),//look at origin
+									move - glm::vec3(0,0,67678000.0f),//look minus z-wards
 									//move+rot*vec3(0,0,1),//figure out a way to handle direction vectors, for camera rotation
 									glm::vec3(0.0f, 1.0f, 0.0f));
 
