@@ -126,11 +126,10 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 			uint8_t jType = types[j];
 			float Mj = masses[jType];
 			float r = glm::distance(positions[i], positions[j]);
-			#ifdef __CUDA_ARCH__
-				glm::vec3 unit_vector = (positions[j] - positions[i])*(__frcp_rn(r));//glm::normalize(positions[j] - positions[i]);
-			#else
-				glm::vec3 unit_vector = (positions[j] - positions[i])*(1.0f/r);
-			#endif
+			//glm::vec3 unit_vector = glm::normalize(positions[j] - positions[i]);
+			//not sure which is faster, above or this
+			glm::vec3 unit_vector = (positions[j] - positions[i])*(1.0f/r);
+
 			//if (r < epsilon) { r = epsilon; }
 			r = fmaxf(r, epsilon);
 			float gravForce = (G * Mi * Mj / (r*r));
@@ -151,50 +150,49 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 				} else {
 					//If the shell of one of the particles is penetrated, but not the other
 					bool isMerging = (glm::dot((positions[j] - positions[i]), (velocities[j] - velocities[i])) <= 0);
-					//float KRPj = rep_redc[jType];
+
+					//this is a silly way to get rid of branches. It is slightly faster
 					#ifdef __CUDA_ARCH__
 						float KRPj = __fmaf_rn(rep_redc[jType],(float) (!(isMerging & r < jShellD)), (float)(isMerging & r < jShellD));
 						float KRPi2 = __fmaf_rn(KRPi,(float) (!(isMerging & r < iShellD)), (float)(isMerging & r < iShellD));
 					#else
-						float KRPj = rep_redc[jType] * (float)(!isMerging) + (float)isMerging;
-						float KRPi2 = KRPi * (!isMerging) + (float)isMerging;
+						float KRPj = rep_redc[jType] * (float)(!(isMerging & r < jShellD)) + (float)(isMerging & r < jShellD);
+						float KRPi2 = KRPi * (!(isMerging & r < iShellD)) + (float)(isMerging & r < iShellD);
 					#endif
-					//if (iShellD <= r && r < jShellD) {
-						/*if (isMerging) {
+					float repForce = 0.5f*((Ki*KRPi2) + (Kj*KRPj))*((D*D) - (r*r));
+					force += (gravForce - repForce) * unit_vector;
+					/*float KRPj = rep_redc[jType];
+					if (iShellD <= r && r < jShellD) {
+						if (isMerging) {
 							float repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
 							force += (gravForce - repForce) * unit_vector;
 						} else {
 							float repForce = 0.5*(Ki + (Kj*KRPj))*((D*D) - (r*r));
 							force += (gravForce - repForce) * unit_vector;
-						}*/
-						//float repForce = 0.5f*(Ki + (Kj*KRPj))*((D*D) - (r*r));
-						//force += (gravForce - repForce) * unit_vector;
-					//} else if (jShellD <= r && r < iShellD) {//new version
+						}
+					} else if (jShellD <= r && r < iShellD) {//new version
 						//else if (D - D*SDPi <= r && r < D - D*SDPj) {//old version...
 						//If the shell of one of the particles is penetrated, but not the other(same as above, but if the ratios are the opposite)
 
-						/*if (isMerging) {
+						if (isMerging) {
 							float repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
 							force += (gravForce - repForce) * unit_vector;
 						} else {
 							float repForce = 0.5*((Ki*KRPi) + Kj)*((D*D) - (r*r));
 							force += (gravForce - repForce) * unit_vector;
-						}*/
-						//float repForce = 0.5f*((Ki*KRPi2) + Kj)*((D*D) - (r*r));
-						//force += (gravForce - repForce) * unit_vector;
-					//} else if (r < jShellD && r < iShellD) {
+						}
+					} else if (r < jShellD && r < iShellD) {
 						//If both shells are penetrated
-						/*
+
 						if (isMerging) {
 							float repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
 							force += (gravForce - repForce) * unit_vector;
 						} else {
 							float repForce = 0.5*((Ki*KRPi) + (Kj*KRPj))*((D*D) - (r*r));
 							force += (gravForce - repForce) * unit_vector;
-						}*/
-						float repForce = 0.5f*((Ki*KRPi2) + (Kj*KRPj))*((D*D) - (r*r));
-						force += (gravForce - repForce) * unit_vector;
-					//}
+						}
+
+					}*/
 				}
 			}
 
