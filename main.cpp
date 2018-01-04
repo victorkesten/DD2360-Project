@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
+#include <chrono>
 #include <iostream>
 
 //#define NUM_PARTICLES 100000
@@ -200,6 +200,7 @@ int main() {
 		colors[3] = glm::vec4(0.1f, 1.0f, 0.0f, 0.6f);
 		//m.Draw();
 		//float a = 0.0f;
+		auto start = std::chrono::high_resolution_clock::now();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		for (int i = 0; i < NUM_PARTICLES; i++) {
 			//glm::mat4 translation = glm::mat4(1);
@@ -217,7 +218,10 @@ int main() {
 			//a += 0.1f;
 			particle.Draw();
 		}
-
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = end - start;
+		double timems = elapsed.count() * 1000;
+		printf("drawing time for one step took %f ms\n", timems);
 
 		//m.Draw();
 		/*

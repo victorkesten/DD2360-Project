@@ -1,7 +1,7 @@
 CC = gcc
 CXX = g++
 
-COMPILE_FLAGS = -Wall -ggdb -O3 -Wno-write-strings
+COMPILE_FLAGS = -Wall -ggdb -O3 -Wno-write-strings -std=c++11
 LINK_FLAGS = -lglfw -lGL -lGLU -ldl -lcudart#-lX11#-lgdi32
 
 # glfw = d:/external/glfw-3.1
@@ -32,7 +32,7 @@ glad.o: OpenGLLibraries/glad/src/glad.c
 				$(CC) $(COMPILE_FLAGS) $(INCLUDES) -c -o glad.o OpenGLLibraries/glad/src/glad.c
 
 nbodysim.o: nbodysim.cu
-	nvcc -arch=sm_53 nbodysim.cu -c -o nbodysim.o -std=c++11
+	nvcc -arch=sm_53 nbodysim.cu -c -o nbodysim.o -std=c++11 
 
 .PHONY: clean
 clean:

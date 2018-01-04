@@ -11,8 +11,8 @@
 #include "device_launch_parameters.h"
 #include "nbodysim.h"
 
-#define TPB 256
-
+//#define TPB 256
+#define TPB 32
 //dont forget renaming everything .cu	- or is that needed in VS?
 
 
@@ -113,7 +113,7 @@ int getParticleCount() {
 /*simulate the next state of particle with index i*/
 __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3 *positions, glm::vec3 *velocities, glm::vec3 *forces, uint8_t *types) {
 
-	glm::vec3 force(0, 0, 0);
+	glm::vec3 force(0.0f, 0.0f, 0.0f);
 
 	uint8_t iType = types[i];
 	float Mi = masses[iType];
@@ -123,70 +123,78 @@ __host__ __device__ static void particleStep(int NUM_PARTICLES, int i, glm::vec3
 
 	for (int j = 0; j < NUM_PARTICLES; j++) {
 		if (j != i) {
-
 			uint8_t jType = types[j];
 			float Mj = masses[jType];
-			float Kj = rep[jType];
-			float KRPj = rep_redc[jType];
-			float SDPj = shell_depth[jType];
-
-
-			bool isMerging = (glm::dot((positions[j] - positions[i]), (velocities[j] - velocities[i])) <= 0);
 			float r = glm::distance(positions[i], positions[j]);
-			glm::vec3 unit_vector = glm::normalize(positions[j] - positions[i]);
+			#ifdef __CUDA_ARCH__
+				glm::vec3 unit_vector = (positions[j] - positions[i])*(__frcp_rn(r));//glm::normalize(positions[j] - positions[i]);
+			#else
+				glm::vec3 unit_vector = (positions[j] - positions[i])*(1.0f/r);
+			#endif
+			//if (r < epsilon) { r = epsilon; }
+			r = fmaxf(r, epsilon);
 			float gravForce = (G * Mi * Mj / (r*r));
-			float repForce = 0.0f;
-
-			if (r < epsilon) { r = epsilon; }
 			//--------------------------------------------------------
 
 			//If the two particles doesn't touch at all
-			//NOTE: it might be a good idea to always just add the gravitational force to the final force
-			//since this spares us an if statement, which are costly on the GPU
 			if (D <= r) {
 				force += (gravForce)* unit_vector;
-			}
+			} else {
+				float Kj = rep[jType];
+				float SDPj = shell_depth[jType];
+				float iShellD = D - D*SDPi;
+				float jShellD = D - D*SDPj;
+				if (iShellD <= r && jShellD <= r) {
+					//outer shells penetrated
+					float repForce = 0.5f*(Ki + Kj)*((D*D) - (r*r));
+					force += (gravForce - repForce) * unit_vector;
+				} else {
+					//If the shell of one of the particles is penetrated, but not the other
+					bool isMerging = (glm::dot((positions[j] - positions[i]), (velocities[j] - velocities[i])) <= 0);
+					//float KRPj = rep_redc[jType];
+					#ifdef __CUDA_ARCH__
+						float KRPj = __fmaf_rn(rep_redc[jType],(float) (!(isMerging & r < jShellD)), (float)(isMerging & r < jShellD));
+						float KRPi2 = __fmaf_rn(KRPi,(float) (!(isMerging & r < iShellD)), (float)(isMerging & r < iShellD));
+					#else
+						float KRPj = rep_redc[jType] * (float)(!isMerging) + (float)isMerging;
+						float KRPi2 = KRPi * (!isMerging) + (float)isMerging;
+					#endif
+					//if (iShellD <= r && r < jShellD) {
+						/*if (isMerging) {
+							float repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
+							force += (gravForce - repForce) * unit_vector;
+						} else {
+							float repForce = 0.5*(Ki + (Kj*KRPj))*((D*D) - (r*r));
+							force += (gravForce - repForce) * unit_vector;
+						}*/
+						//float repForce = 0.5f*(Ki + (Kj*KRPj))*((D*D) - (r*r));
+						//force += (gravForce - repForce) * unit_vector;
+					//} else if (jShellD <= r && r < iShellD) {//new version
+						//else if (D - D*SDPi <= r && r < D - D*SDPj) {//old version...
+						//If the shell of one of the particles is penetrated, but not the other(same as above, but if the ratios are the opposite)
 
-			else if (D - D*SDPi <= r && D - D*SDPj <= r) {
-				repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
-				force += (gravForce - repForce) * unit_vector;
-			}
-
-			//If the shell of one of the particles is penetrated, but not the other
-			else if (D - D*SDPi <= r && r < D - D*SDPj) {
-				if (isMerging) {
-					repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
-				}
-				else {
-					repForce = 0.5*(Ki + (Kj*KRPj))*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
-				}
-			}
-
-			//If the shell of one of the particles is penetrated, but not the other(same as above, but if the ratios are the opposite)
-			//else if (D - D*SDPi <= r && r < D - D*SDPj) {//old version...
-			else if (D - D*SDPj <= r && r < D - D*SDPi) {//new version
-				if (isMerging) {
-					repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
-				}
-				else {
-					repForce = 0.5*((Ki*KRPi) + Kj)*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
-				}
-			}
-
-
-			//If both shells are penetrated
-			else if (r < D - D*SDPj && r < D - D*SDPi) {
-				if (isMerging) {
-					repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
-				}
-				else {
-					repForce = 0.5*((Ki*KRPi) + (Kj*KRPj))*((D*D) - (r*r));
-					force += (gravForce - repForce) * unit_vector;
+						/*if (isMerging) {
+							float repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
+							force += (gravForce - repForce) * unit_vector;
+						} else {
+							float repForce = 0.5*((Ki*KRPi) + Kj)*((D*D) - (r*r));
+							force += (gravForce - repForce) * unit_vector;
+						}*/
+						//float repForce = 0.5f*((Ki*KRPi2) + Kj)*((D*D) - (r*r));
+						//force += (gravForce - repForce) * unit_vector;
+					//} else if (r < jShellD && r < iShellD) {
+						//If both shells are penetrated
+						/*
+						if (isMerging) {
+							float repForce = 0.5*(Ki + Kj)*((D*D) - (r*r));
+							force += (gravForce - repForce) * unit_vector;
+						} else {
+							float repForce = 0.5*((Ki*KRPi) + (Kj*KRPj))*((D*D) - (r*r));
+							force += (gravForce - repForce) * unit_vector;
+						}*/
+						float repForce = 0.5f*((Ki*KRPi2) + (Kj*KRPj))*((D*D) - (r*r));
+						force += (gravForce - repForce) * unit_vector;
+					//}
 				}
 			}
 
@@ -207,18 +215,18 @@ __global__ static void updateposCuda(int NUM_PARTICLES, glm::vec3 *positions, gl
 	const int i = blockIdx.x*blockDim.x + threadIdx.x;
 	if (i < NUM_PARTICLES) {
 		//kind of working...
-		velocities[i] = velocities[i] + timestep*(forces[i]/masses[types[i]]); //F = ma, thus a = F/m
+		/*velocities[i] = velocities[i] + timestep*(forces[i]/masses[types[i]]); //F = ma, thus a = F/m
 		//velocities[i] = velocities[i] + timestep*(forces[i]);
-		positions[i] = positions[i] + timestep*velocities[i];
+		positions[i] = positions[i] + timestep*velocities[i];*/
 
-		/*
+
 		//leap frog method from wikipedia
-		//doesn't seem to work as well. Might have to do with timestep
+		//seems to work fine
 		positions[i] = positions[i] + timestep*velocities[i] + 0.5f*timestep*timestep*acceleration[i];
 		//NOTE: we need the forces from the precious timestep here
 		velocities[i] = velocities[i] + 0.5f*((forces[i]/masses[types[i]])+acceleration[i])*timestep; //F = ma, thus a = F/m
 		acceleration[i] = (forces[i]/masses[types[i]]);
-		*/
+
 	}
 }
 
@@ -257,18 +265,18 @@ __global__ static void simstepCuda(int NUM_PARTICLES, glm::vec3 *positions, glm:
 
 /*The CUDA variant of the particle n-body simulation loop iteration*/
 static void simulateStepGPU() {
-	int blocks = pow(2, ceil(log(NUM_PARTICLES) / log(2)));
-
+	//int blocks = pow(2, ceil(log(NUM_PARTICLES) / log(2)));
+	int blocks = (NUM_PARTICLES + TPB-1)/TPB;
 	auto start = std::chrono::high_resolution_clock::now();
-
-	simstepCuda <<< blocks, TPB >> >(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types);
-	cudaDeviceSynchronize();
-	updateposCuda <<< blocks, TPB >> >(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types, dev_acceleration);
-	cudaDeviceSynchronize();
-
+	//for(int i = 0; i < times; ++i) {
+		simstepCuda <<< blocks, TPB >>>(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types);
+		cudaDeviceSynchronize();
+		updateposCuda <<< blocks, TPB >>>(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types, dev_acceleration);
+		cudaDeviceSynchronize();
+	//}
 	cudaMemcpy(host_positions, dev_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
-	cudaMemcpy(host_velocities, dev_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
-	cudaMemcpy(host_forces, dev_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+	//cudaMemcpy(host_velocities, dev_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+	//cudaMemcpy(host_forces, dev_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {
 		printf("Error: %s\n", cudaGetErrorString(err));
@@ -283,9 +291,9 @@ static void simulateStepGPU() {
 }
 
 void simulateStep() {
-	printf("pos: %f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
-	printf("vel: %f %f %f\n", (double)(host_velocities[0].x), (double)(host_velocities[0].y), (double)(host_velocities[0].z));
-	printf("for: %f %f %f\n", (double)(host_forces[0].x), (double)(host_forces[0].y), (double)(host_forces[0].z));
+	//printf("pos: %f %f %f\n", (double)(host_positions[0].x), (double)(host_positions[0].y), (double)(host_positions[0].z));
+	//printf("vel: %f %f %f\n", (double)(host_velocities[0].x), (double)(host_velocities[0].y), (double)(host_velocities[0].z));
+	//printf("for: %f %f %f\n", (double)(host_forces[0].x), (double)(host_forces[0].y), (double)(host_forces[0].z));
 	for(int i = 0; i < SIM_PER_RENDER; ++i) {
 		if(useGpu) {
 			simulateStepGPU();
