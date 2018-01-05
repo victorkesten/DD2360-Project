@@ -16,8 +16,8 @@
 //************************************** THE VARIABLES TO CONTROL THE RENDERING ***********************************************
 static bool readLazyFile = false;	//Set this to false to calculate a new file before replaying it; set it to true to read a precalculated file and not calculate anything new.
 static int calcMax = 10000;			//The number of iterations before it terminates and replays the calculated values
-static int NUM_PARTICLES = 10000;//16384;//44295;			//currently takes 10ms for 10000 particles, 1s for 120000 particles. Goal is 131,072, or 16,384			
-static const int SIM_PER_RENDER = 1;
+static int NUM_PARTICLES = 16384;//16384;//44295;			//currently takes 10ms for 10000 particles, 1s for 120000 particles. Goal is 131,072, or 16,384
+static const int SIM_PER_RENDER = 2;
 //*****************************************************************************************************************************
 
 #define TPB 32
@@ -128,17 +128,18 @@ static void readCalculatedData();
 static void storeCalculatedData();
 
 void initStoredPositions() {
-	printf("Do you want to load stored values and skip calculation? (y/n)\n");
-	std::string choice = "";
-	std::cin >> choice;
-	if (!choice.compare("y")) {
-		readLazyFile = true;
-	}
-	else if (!choice.compare("n")) {
-		readLazyFile = false;
-	}
-	else {
-		printf("DO YOU THINK THIS IS A MOTHERF****N GAME\n");
+	while(true) {
+		printf("Do you want to load stored values and skip calculation? (y/n)\n");
+		std::string choice = "";
+		std::cin >> choice;
+		if (!choice.compare("y")) {
+			readLazyFile = true;
+			break;
+		}
+		else if (!choice.compare("n")) {
+			readLazyFile = false;
+			break;
+		}
 	}
 
 	storedPositions = new glm::vec3*[calcMax];
@@ -153,7 +154,7 @@ void initStoredPositions() {
 
 int getParticleCount() {
 	initStoredPositions(); //maybe this should be put elsewhere, somewhere in main. But hey, it is used there, right? :D
-	return NUM_PARTICLES;
+	return NUM_PARTICLES;  //ohgod --simon
 }
 //**************************************************** SIMULATION FUNCTIONS ****************************************************
 
@@ -331,8 +332,9 @@ static void simulateStepGPU() {
 	updateposCuda << < blocks, TPB >> >(NUM_PARTICLES, dev_positions, dev_velocities, dev_forces, dev_types, dev_acceleration);
 	cudaDeviceSynchronize();
 	//}
-	cudaMemcpy(host_positions, dev_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
-	memcpy(storedPositions[timesteps % calcMax], host_positions, NUM_PARTICLES * sizeof(glm::vec3));
+	//moved
+	//cudaMemcpy(host_positions, dev_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+	//memcpy(storedPositions[timesteps % calcMax], host_positions, NUM_PARTICLES * sizeof(glm::vec3));
 	//cudaMemcpy(host_velocities, dev_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 	//cudaMemcpy(host_forces, dev_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
 	cudaError_t err = cudaGetLastError();
@@ -380,6 +382,13 @@ void simulateStep() {
 				simulateStepCPU();
 			}
 		}
+		if(useGpu) {
+			//moved here to cut down simulation time a little
+			cudaMemcpy(host_positions, dev_positions, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+			//cudaMemcpy(host_velocities, dev_velocities, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+			//cudaMemcpy(host_forces, dev_forces, NUM_PARTICLES * sizeof(glm::vec3), cudaMemcpyDeviceToHost);
+		}
+		memcpy(storedPositions[timesteps % calcMax], host_positions, NUM_PARTICLES * sizeof(glm::vec3));
 	}
 	timesteps++;
 }
@@ -467,16 +476,20 @@ static void prep_planetoid(int i0, int i1, glm::vec3 centerpos, glm::vec3 dir, g
 
 using namespace std;
 static void storeCalculatedData() {
-	printf("Calculations have finished. Do you want to store the calculated data for later use? (THIS COULD TAKE A COUPLE OF MINUTES) (y/n)\n");
-	std::string choice = "";
-	std::cin >> choice;
+	while(true) {
+		printf("Calculations have finished. Do you want to store the calculated data for later use? (THIS COULD TAKE A COUPLE OF MINUTES) (y/n)\n");
+		std::string choice = "";
+		std::cin >> choice;
 
-	if (!choice.compare("n")) {
-		return;
+		if (!choice.compare("n")) {
+			return;
+		}
+		else if(!choice.compare("y")){
+			break;
+		}
 	}
-	else {
-		printf("DO YOU THINK THIS IS A MOTHERF****N GAME\n");
-	}
+
+
 
 	std::ofstream outdata;
 	outdata.open("particle_positions.txt");
@@ -560,5 +573,3 @@ static void readCalculatedData() {
 
 
 }
-
-
