@@ -1,5 +1,6 @@
 //#pragma once
 #include <glad/glad.h>
+#include <glad/glad.c>
 #include <GLFW/glfw3.h>
 #include "window.h"
 #include "shader.h"
@@ -15,18 +16,35 @@
 // TODO:
 // Code comment/clean
 
+static bool hasFocus = false;
 
-void ProcessInputs(){
+float camera_distance = 100000000.0f;
+float move_speed = 1000000.0f;
+glm::vec3 camPos(0, 0, camera_distance);
+glm::vec3 rotate(0, 0, 0);
 
-}
+float horizontalAngle = 0;
+float verticalAngle = 0;
+glm::vec3 direction = glm::vec3(0, 0, -camera_distance);
+
+glm::mat4 view = glm::lookAt(glm::vec3(4.0f, 10.0f, -10.0f),
+	glm::vec3(0.0f, 0.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f));
+
+
+
+void window_focus_callback(GLFWwindow* window, int focused);
+
 
 int main() {
 	Window w;
-	if(w.InitWindow(1000,1000, "Hey")) {
+	if (w.InitWindow(1000, 1000, "Hey")) {
 		return -1;
 	}
-
+	GLFWwindow* window = w.GetWindow();
 	int NUM_PARTICLES = getParticleCount();
+
+	glfwSetWindowFocusCallback(window, window_focus_callback);
 
 	Shader shade("basic");
 	shade.DisplayOpenGLInfo();
@@ -72,12 +90,11 @@ int main() {
 	// This just changes the position of each particle a little bit.
 	/*
 	for (int i = 0; i < NUM_PARTICLES; i++) {
-		particle_array[i] = Mesh();
-		for (int j = 0; j < 24; j++) {
-			vertices[j] += 1.0f;
-		}
-		particle_array[i].AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
-
+	particle_array[i] = Mesh();
+	for (int j = 0; j < 24; j++) {
+	vertices[j] += 1.0f;
+	}
+	particle_array[i].AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
 	}*/
 	particle = Mesh();
 	particle.AddVertices(vertices, indices, sizeof(vertices), sizeof(indices));
@@ -104,15 +121,17 @@ int main() {
 	//glPolygonMode()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glm::vec3 move(0,0,67678000.0f);
-	//glm::vec3 move (67328352.000000, -67196848.000000, 10654063.000000);
-	glm::vec3 rotate(0, 0, 0);
-	glm::mat4 view = glm::lookAt(glm::vec3(4.0f, 10.0f, -10.0f),
-										glm::vec3(0.0f, 0.0f, 0.0f),
-										glm::vec3(0.0f, 1.0f, 0.0f));
+
 
 	//init particle simulation
 	init_particles_planets();
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);	//hide cursor :)
+	int w0, h0;
+	glfwGetWindowSize(window, &w0, &h0);
+	glfwSetCursorPos(window, w0 / 2, h0 / 2);
+
+
 
 	while (!w.ShouldClose()) {
 		//update simulation
@@ -134,62 +153,59 @@ int main() {
 
 		glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
 		glm::mat4 trans;
+		glm::vec3 right = glm::vec3(
+			sin(horizontalAngle - 3.14f / 2.0f),
+			0,
+			cos(horizontalAngle - 3.14f / 2.0f)
+		);
+
 
 		trans = glm::rotate(trans, glm::radians(0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 		vec = trans * vec;
-		int state = glfwGetKey(w.GetWindow(), GLFW_KEY_A);
-		if (state == GLFW_PRESS) {
-			move += glm::vec3(-1000000.0f, 0.0f, 0.0f);
+
+		if (hasFocus) {
+			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { camPos += move_speed*direction / glm::length(direction); }
+			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { camPos -= move_speed*direction / glm::length(direction); }
+
+			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { camPos += move_speed*right; }
+			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { camPos -= move_speed*right; }
+
+			//******************* MOUSE INPUT *****************************
+
+			double xpos, ypos;
+			float pi = 3.1413;
+			int width, height;
+			glfwGetCursorPos(window, &xpos, &ypos);
+			glfwGetWindowSize(window, &width, &height);
+
+			glfwSetCursorPos(window, width / 2, height / 2);
+
+			horizontalAngle += 0.0001 * float(width / 2 - xpos);
+			verticalAngle -= 0.0001 * float(height / 2 - ypos);
+
+			if (verticalAngle > 0.5 * pi) { verticalAngle = 0.5 * pi; }
+			if (verticalAngle < -0.5 * pi) { verticalAngle = -0.5 * pi; }
+
+			direction = glm::vec3(
+				cos(verticalAngle) * sin(horizontalAngle),
+				sin(verticalAngle),
+				cos(verticalAngle) * cos(horizontalAngle)
+			);
+			direction *= -camera_distance;
+
+			//********************************************************************************************
 		}
 
-		int state2 = glfwGetKey(w.GetWindow(), GLFW_KEY_D);
-		if (state2 == GLFW_PRESS) {
-			move += glm::vec3(1000000.0f, 0.0f, 0.0f);
-		}
 
-		int state3 = glfwGetKey(w.GetWindow(), GLFW_KEY_W);
-		if (state3 == GLFW_PRESS) {
-			move += glm::vec3(0.0f, 1000000.0f, 0.0f);
-		}
 
-		int state4 = glfwGetKey(w.GetWindow(), GLFW_KEY_S);
-		if (state4 == GLFW_PRESS) {
-			move += glm::vec3(0.0f, -1000000.0f, 0.0f);
-		}
-		int state5 = glfwGetKey(w.GetWindow(), GLFW_KEY_RIGHT);
-		if (state5 == GLFW_PRESS) {
-			rotate.y += 0.05f;
-		}
-		int state6 = glfwGetKey(w.GetWindow(), GLFW_KEY_LEFT);
-		if (state6 == GLFW_PRESS) {
-			rotate.y -= 0.05f;
-		}
-
-		int state7 = glfwGetKey(w.GetWindow(), GLFW_KEY_UP);
-		if (state7 == GLFW_PRESS) {
-			rotate.x += 0.05f;
-		}
-		int state8 = glfwGetKey(w.GetWindow(), GLFW_KEY_DOWN);
-		if (state8 == GLFW_PRESS) {
-			rotate.x -= 0.05f;
-		}
-
-		int state9 = glfwGetKey(w.GetWindow(), GLFW_KEY_Q);
-		if (state9 == GLFW_PRESS) {
-			rotate.z+= 0.05f;
-		}
-		int state10 = glfwGetKey(w.GetWindow(), GLFW_KEY_E);
-		if (state10 == GLFW_PRESS) {
-			rotate.z -= 0.05f;
-		}
 		//generate rotation matrix
-		//host_positions[NUM_PARTICLES/2] = glm::vec3(0,0,0);
-		view = glm::lookAt(move,
-									//host_positions[NUM_PARTICLES/2],//look at one particle
-									//glm::vec3(0,0,),//look at origin
-									move - glm::vec3(0,0,67678000.0f),//look minus z-wards
-									//move+rot*vec3(0,0,1),//figure out a way to handle direction vectors, for camera rotation
-									glm::vec3(0.0f, 1.0f, 0.0f));
+
+
+		view = glm::lookAt(
+			camPos,
+			camPos + direction,
+			glm::vec3(0.0f, 1.0f, 0.0f)
+		);
 
 		shade.UpdateUniforms(rotate, view);
 
@@ -226,13 +242,11 @@ int main() {
 		//m.Draw();
 		/*
 		for (int i = 0; i < NUM_PARTICLES; i++) {
-			shade.UpdateUniforms(move-host_positions[i], rotate, rot, view);
-
-			glm::vec4 col = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-			glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-			particle_array[0].Draw();
+		shade.UpdateUniforms(move-host_positions[i], rotate, rot, view);
+		glm::vec4 col = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		glUniform4fv(colorLoc, 1, (float*)glm::value_ptr(col));
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		particle_array[0].Draw();
 		}*/
 
 		glfwSwapBuffers(w.GetWindow());
@@ -247,4 +261,17 @@ int main() {
 	glfwTerminate();
 
 	return 0;
+}
+
+
+void window_focus_callback(GLFWwindow* window, int focused)
+{
+	if (focused)
+	{
+		hasFocus = true;
+	}
+	else
+	{
+		hasFocus = false;
+	}
 }
