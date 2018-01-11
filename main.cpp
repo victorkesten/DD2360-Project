@@ -1,6 +1,6 @@
 //#pragma once
 #include <glad/glad.h>
-#include <glad/glad.c>
+//#include <glad/glad.c>
 #include <GLFW/glfw3.h>
 #include "window.h"
 #include "shader.h"

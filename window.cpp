@@ -12,16 +12,30 @@ Window::~Window()
 {
 }
 
-
+void Window::ErrorCallback(int, const char* err_str) {
+  std::cout << "GLFW Error: " << err_str << std::endl;
+}
 // Creates window, sets size and window name.
 int Window::InitWindow(int x, int y,  char * _name){
   SCREEN_WIDTH = x;
   SCREEN_HEIGHT = y;
   name = _name;
-  glfwInit();
+  if(!glfwInit()) {
+    std::cout << "Failed to init GLFW" << std::endl;
+    glfwTerminate();
+    return -1;
+  }
+
+  glfwSetErrorCallback(ErrorCallback);
+
+  int a, b, c;
+  glfwGetVersion(&a, &b, &c);//use current version
+  printf("Using GLFW %i-%i-%i\n", a,b,c);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+  if(a >= 3 && b >= 2)
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   window = glfwCreateWindow(x,y,_name,NULL, NULL);
 

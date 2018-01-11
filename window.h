@@ -17,6 +17,7 @@ public:
 	int InitWindow(int, int, char *);
 	void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 	bool ShouldClose();
+	static void ErrorCallback(int, const char* err_str);
 
 	// bad programming but for now this is what I'll have to do.
 	GLFWwindow * GetWindow() { return window; }
